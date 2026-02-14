@@ -1,0 +1,1734 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>TDP4</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes" />
+    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="shortcut icon" type="image/png" href="./assets/ui/favicon.ico">
+
+    <!-- Emoji Mart Script -->
+    <script src="https://cdn.jsdelivr.net/npm/emoji-mart@latest/dist/browser.js"></script>
+    <script>
+        // Initialize any necessary global variables here
+        window.EmojiMart = window.EmojiMart || {};
+    </script>
+
+    <!-- Your Custom Script -->
+    <script type="text/javascript" src="./tdp4.js"></script>
+
+    <script>
+        let currentZoom = 1;
+        let gameContainer;
+
+        // Save zoom level to localStorage
+        function saveZoomLevel(zoom) {
+            localStorage.setItem('tdp4-zoom-level', zoom.toString());
+        }
+
+        // Load zoom level from localStorage
+        function loadZoomLevel() {
+            const savedZoom = localStorage.getItem('tdp4-zoom-level');
+            return savedZoom ? parseFloat(savedZoom) : 1; // Default to 1 if no saved zoom
+        }
+
+        // Clear saved zoom level
+        function clearSavedZoom() {
+            localStorage.removeItem('tdp4-zoom-level');
+            currentZoom = 1;
+            applyZoom(currentZoom);
+        }
+
+        window.addEventListener("load", function () {
+            // Initialize EmojiMart only after window is fully loaded
+            const pickerOptions = {
+                onEmojiSelect: console.log,
+            };
+
+            const picker = new EmojiMart.Picker(pickerOptions);
+
+            // Initialize zoom functionality
+            gameContainer = document.getElementById("openfl-content");
+
+            // Load saved zoom level
+            currentZoom = loadZoomLevel();
+
+            initializeZoom();
+
+            // Apply the saved zoom level after game loads
+            setTimeout(() => {
+                applyZoom(currentZoom);
+            }, 100); // Small delay to ensure game is loaded
+
+            // Set config URL for Electron
+            // window.ELECTRON_CONFIG_URL = 'https://static.darkness-project.com/config/config_js_darkness.json';
+
+            // Lime embed with WebGL performance parameters
+            lime.embed("tdp4", "openfl-content", 1920, 1080, {
+                parameters: {
+                    // Core WebGL settings
+                    "renderer": "webgl",
+                    "antialias": false,
+                    "powerPreference": "high-performance",
+                    "failIfMajorPerformanceCaveat": false,
+
+                    // Audio performance
+                    "audioBufferSize": 2048,
+                    "audioSampleRate": 44100,
+
+                    // Additional WebGL optimizations
+                    "webgl2": true,
+                    "multisampling": 0,
+                    "vsync": true,
+                    "fps": 144
+                }
+            });
+        });
+
+        // Responsive zoom functionality
+        function initializeZoom() {
+            // Touch/pinch zoom for mobile
+            let initialDistance = 0;
+            let initialZoom = 1;
+            let isZooming = false;
+
+            gameContainer.addEventListener('touchstart', function (e) {
+                if (e.touches.length === 2) {
+                    isZooming = true;
+                    initialDistance = getDistance(e.touches[0], e.touches[1]);
+                    initialZoom = currentZoom;
+                    e.preventDefault();
+                }
+            }, { passive: false });
+
+            gameContainer.addEventListener('touchmove', function (e) {
+                if (isZooming && e.touches.length === 2) {
+                    const currentDistance = getDistance(e.touches[0], e.touches[1]);
+                    const scale = currentDistance / initialDistance;
+                    currentZoom = Math.max(0.5, Math.min(3, initialZoom * scale));
+                    applyZoom(currentZoom);
+                    e.preventDefault();
+                }
+            }, { passive: false });
+
+            gameContainer.addEventListener('touchend', function (e) {
+                if (e.touches.length < 2) {
+                    isZooming = false;
+                }
+            });
+
+            // Mouse wheel zoom - WORKS ANYWHERE ON PAGE with CTRL
+            document.addEventListener('wheel', function (e) {
+                // Only zoom if CTRL or CMD key is pressed
+                if (e.ctrlKey || e.metaKey) {
+                    e.preventDefault();
+                    const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+                    currentZoom = Math.max(0.5, Math.min(3, currentZoom * zoomFactor));
+                    applyZoom(currentZoom);
+                }
+                // If CTRL/CMD not pressed, allow normal scrolling behavior
+            }, { passive: false });
+
+            // Keyboard zoom controls
+            document.addEventListener('keydown', function (e) {
+                if (e.ctrlKey || e.metaKey) {
+                    if (e.key === '=' || e.key === '+') {
+                        e.preventDefault();
+                        currentZoom = Math.min(3, currentZoom * 1.1);
+                        applyZoom(currentZoom);
+                    } else if (e.key === '-') {
+                        e.preventDefault();
+                        currentZoom = Math.max(0.5, currentZoom * 0.9);
+                        applyZoom(currentZoom);
+                    } else if (e.key === '0') {
+                        e.preventDefault();
+                        currentZoom = 1;
+                        applyZoom(currentZoom);
+                    }
+                }
+            });
+
+            // Double-tap to reset zoom on mobile
+            let lastTap = 0;
+            gameContainer.addEventListener('touchend', function (e) {
+                if (e.touches.length === 0 && !isZooming) {
+                    const currentTime = new Date().getTime();
+                    const tapLength = currentTime - lastTap;
+                    if (tapLength < 500 && tapLength > 0) {
+                        currentZoom = currentZoom === 1 ? 2 : 1;
+                        applyZoom(currentZoom);
+                        e.preventDefault();
+                    }
+                    lastTap = currentTime;
+                }
+            });
+        }
+
+        function getDistance(touch1, touch2) {
+            const dx = touch1.clientX - touch2.clientX;
+            const dy = touch1.clientY - touch2.clientY;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        function applyZoom(zoom) {
+            const container = gameContainer;
+            if (container) {
+                container.style.transform = `translate(-50%, -50%) scale(${zoom})`;
+                container.style.transformOrigin = 'center center';
+
+                // Save zoom level to localStorage
+                saveZoomLevel(zoom);
+
+                // Update zoom indicator
+                updateZoomIndicator(Math.round(zoom * 100));
+            }
+        }
+
+        function updateZoomIndicator(percentage) {
+            let indicator = document.getElementById('zoom-indicator');
+            if (!indicator) {
+                indicator = document.createElement('div');
+                indicator.id = 'zoom-indicator';
+                document.body.appendChild(indicator);
+            }
+            indicator.textContent = `${percentage}%`;
+            indicator.style.opacity = '1';
+
+            // Hide after 2 seconds
+            clearTimeout(indicator.hideTimeout);
+            indicator.hideTimeout = setTimeout(() => {
+                indicator.style.opacity = '0';
+            }, 2000);
+        }
+
+        // Prevent default touch behavior on body but allow zooming
+        window.addEventListener("touchmove", function (event) {
+            if (!event.target.closest('#openfl-content')) {
+                event.preventDefault();
+            }
+        }, { capture: false, passive: false });
+
+        if (typeof window.devicePixelRatio != 'undefined' && window.devicePixelRatio > 2) {
+            var meta = document.getElementById("viewport");
+            meta.setAttribute('content', 'width=device-width, initial-scale=' + (2 / window.devicePixelRatio) + ', user-scalable=yes');
+        }
+
+        // Fullscreen change handler
+        function handleFullscreenChange() {
+            const backgroundContainer = document.getElementById("background-container");
+            const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement ||
+                document.mozFullScreenElement || document.msFullscreenElement;
+
+            if (isFullscreen) {
+                // Hide background in fullscreen
+                backgroundContainer.style.display = "none";
+            } else {
+                // Show background and restore zoom
+                backgroundContainer.style.display = "block";
+                setTimeout(() => {
+                    applyZoom(currentZoom);
+                }, 100);
+            }
+        }
+
+        // Listen for fullscreen changes
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+        document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+        document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+    </script>
+
+    <style>
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        #background-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-image: url('assets/ui/tdp4_bg_full_new.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            z-index: -1;
+        }
+
+        #openfl-content {
+            background: #000000;
+            width: 70vw;
+            height: calc(70vw * 9 / 16);
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            max-height: 70vh;
+            max-width: calc(70vh * 16 / 9);
+        }
+
+        /* Zoom indicator */
+        #zoom-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        /* Zoom controls for better UX */
+        .zoom-controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            z-index: 1000;
+        }
+
+        .zoom-btn {
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s ease;
+        }
+
+        .zoom-btn:hover {
+            background: rgba(0, 0, 0, 0.9);
+        }
+
+        .zoom-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Cheat client menu overlay */
+        #cheat-menu-toggle {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1100;
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: none;
+            background: linear-gradient(135deg, #1f2933, #111827);
+            color: #f9fafb;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            cursor: pointer;
+        }
+
+        #cheat-menu-toggle:hover {
+            background: linear-gradient(135deg, #273549, #111827);
+        }
+
+        #cheat-menu {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle at top left, rgba(15, 23, 42, 0.8), rgba(3, 7, 18, 0.96));
+            z-index: 1099;
+        }
+
+        #cheat-menu.hidden {
+            display: none;
+        }
+
+        .cheat-menu-panel {
+            display: flex;
+            width: 960px;
+            max-width: 96vw;
+            height: 540px;
+            max-height: 88vh;
+            background: #090b10;
+            border-radius: 16px;
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.9);
+            color: #e5e7eb;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            overflow: hidden;
+        }
+
+        .cheat-sidebar {
+            width: 72px;
+            background: linear-gradient(180deg, #050711, #050816);
+            border-right: 1px solid rgba(55, 65, 81, 0.7);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 12px 0;
+            gap: 16px;
+        }
+
+        .cheat-sidebar-logo {
+            width: 64px;
+            height: 64px;
+            border-radius: 16px;
+            background: radial-gradient(circle at top left, #16a3ff, #3b82f6, #1f2937);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 8px;
+        }
+
+        .cheat-sidebar-logo img {
+            max-width: 40px;
+            max-height: 40px;
+            object-fit: contain;
+        }
+
+        .cheat-sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .cheat-sidebar-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            border: none;
+            background: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+        }
+
+        .cheat-sidebar-btn img {
+            width: 22px;
+            height: 22px;
+            object-fit: contain;
+            /* по умолчанию делаем иконки белыми */
+            filter: brightness(0) invert(1);
+            opacity: 0.9;
+            transition: filter 0.15s ease, opacity 0.15s ease;
+        }
+
+        .cheat-sidebar-btn:hover {
+            background: rgba(55, 65, 81, 0.5);
+            transform: translateY(-1px);
+        }
+
+        .cheat-sidebar-btn.active {
+            background: linear-gradient(135deg, #0ea5e9, #2563eb);
+            box-shadow: 0 0 0 1px rgba(248, 250, 252, 0.4), 0 12px 30px rgba(37, 99, 235, 0.6);
+        }
+
+        .cheat-sidebar-btn.active img {
+            /* у активного раздела возвращаем родной цвет */
+            filter: none;
+            opacity: 1;
+        }
+
+        .cheat-sidebar-spacer {
+            flex: 1;
+        }
+
+        .cheat-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 16px 18px 18px;
+            gap: 14px;
+        }
+
+        .cheat-main-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .cheat-breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: #9ca3af;
+        }
+
+        .cheat-breadcrumb span {
+            white-space: nowrap;
+        }
+
+        .cheat-breadcrumb .cheat-breadcrumb-current {
+            color: #e5e7eb;
+        }
+
+        .cheat-icon-btn {
+            width: 30px;
+            height: 30px;
+            border-radius: 999px;
+            border: 1px solid rgba(55, 65, 81, 0.8);
+            background: radial-gradient(circle at top left, #111827, #020617);
+            color: #d1d5db;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 0;
+            transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+        }
+
+        .cheat-icon-btn:hover {
+            background: radial-gradient(circle at top left, #1f2937, #020617);
+            border-color: #60a5fa;
+            transform: translateY(-0.5px);
+        }
+
+        .cheat-main-body {
+            flex: 1;
+            display: grid;
+            grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.2fr);
+            gap: 16px;
+        }
+
+        .cheat-panel {
+            background: radial-gradient(circle at top left, #050816, #020617);
+            border-radius: 16px;
+            border: 1px solid rgba(31, 41, 55, 0.95);
+            padding: 12px 14px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .cheat-panel-title {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: #9ca3af;
+        }
+
+        .cheat-option-list {
+            margin-top: 4px;
+            border-radius: 12px;
+            background: linear-gradient(180deg, rgba(17, 24, 39, 0.9), rgba(15, 23, 42, 0.96));
+            box-shadow: inset 0 0 0 1px rgba(31, 41, 55, 0.9);
+            padding: 6px 6px 6px 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            overflow: auto;
+        }
+
+        .cheat-option-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 6px;
+            border-radius: 8px;
+            color: #e5e7eb;
+            font-size: 13px;
+        }
+
+        .cheat-option-row:nth-child(odd) {
+            background: rgba(15, 23, 42, 0.7);
+        }
+
+        .cheat-option-row:nth-child(even) {
+            background: rgba(15, 23, 42, 0.45);
+        }
+
+        .cheat-option-row.active {
+            border: 1px solid rgba(56, 189, 248, 0.9);
+            box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.4);
+        }
+
+        .cheat-checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .cheat-checkbox-label span {
+            user-select: none;
+        }
+
+        .cheat-checkbox-label input[type="checkbox"] {
+            width: 14px;
+            height: 14px;
+            accent-color: #38bdf8;
+            cursor: pointer;
+        }
+
+        .cheat-row-right {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .cheat-hotkey-tag {
+            min-width: 34px;
+            padding: 2px 6px;
+            border-radius: 6px;
+            border: 1px solid rgba(55, 65, 81, 0.9);
+            background: linear-gradient(180deg, #020617, #020617);
+            box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.9);
+            font-size: 11px;
+            color: #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        .cheat-hotkey-tag--editing {
+            border-color: #facc15;
+            box-shadow: 0 0 0 1px rgba(250, 204, 21, 0.9);
+            color: #facc15;
+        }
+
+        .cheat-settings-btn {
+            width: 24px;
+            height: 24px;
+            border-radius: 999px;
+            border: 1px solid rgba(55, 65, 81, 0.9);
+            background: radial-gradient(circle at top left, #020617, #020617);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .cheat-settings-btn img {
+            width: 14px;
+            height: 14px;
+            filter: brightness(0) invert(1);
+        }
+
+        .cheat-settings-btn:hover {
+            border-color: #60a5fa;
+            background: radial-gradient(circle at top left, #020617, #111827);
+        }
+
+        .cheat-slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding: 6px 6px;
+            border-radius: 8px;
+            background: rgba(15, 23, 42, 0.9);
+        }
+
+        .cheat-slider-group + .cheat-slider-group {
+            margin-top: 4px;
+        }
+
+        .cheat-slider-label {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #d1d5db;
+        }
+
+        .cheat-slider-value {
+            font-size: 12px;
+            color: #9ca3af;
+        }
+
+        .cheat-slider-group input[type="range"] {
+            width: 100%;
+        }
+
+        .cheat-input-row {
+            margin-top: 4px;
+            display: grid;
+            grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+            gap: 6px;
+            font-size: 12px;
+            color: #9ca3af;
+        }
+
+        .cheat-input-field {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .cheat-input-field input[type="number"] {
+            background: rgba(15, 23, 42, 0.9);
+            border-radius: 8px;
+            border: 1px solid rgba(31, 41, 55, 0.9);
+            padding: 4px 6px;
+            color: #e5e7eb;
+            font-size: 12px;
+        }
+
+        .cheat-input-field input[type="number"]:focus {
+            outline: none;
+            border-color: #38bdf8;
+        }
+
+        .cheat-textarea {
+            width: 100%;
+            min-height: 72px;
+            resize: vertical;
+            background: rgba(15, 23, 42, 0.9);
+            border-radius: 8px;
+            border: 1px solid rgba(31, 41, 55, 0.9);
+            padding: 4px 6px;
+            color: #e5e7eb;
+            font-size: 12px;
+            font-family: inherit;
+        }
+
+        .cheat-textarea:focus {
+            outline: none;
+            border-color: #38bdf8;
+        }
+
+        .friends-add-row {
+            display: flex;
+            gap: 6px;
+            margin-top: 4px;
+        }
+
+        .friends-add-row input[type="text"] {
+            flex: 1;
+            background: rgba(15, 23, 42, 0.9);
+            border-radius: 8px;
+            border: 1px solid rgba(31, 41, 55, 0.9);
+            padding: 4px 6px;
+            color: #e5e7eb;
+            font-size: 12px;
+        }
+
+        @media (max-width: 980px) {
+            .cheat-main-body {
+                grid-template-columns: minmax(0, 1fr);
+            }
+        }
+
+        /* Notifications: bottom-right, slide in from right, hold, slide out right */
+        #ch-notifications {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 1200;
+            display: flex;
+            flex-direction: column-reverse;
+            gap: 8px;
+            pointer-events: none;
+        }
+        .ch-notification {
+            padding: 10px 16px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(3, 7, 18, 0.98));
+            border: 1px solid rgba(56, 189, 248, 0.5);
+            color: #e5e7eb;
+            font-size: 13px;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+            white-space: nowrap;
+            transform: translateX(120%);
+            opacity: 0;
+            transition: transform 0.35s ease-out, opacity 0.35s ease-out;
+        }
+        .ch-notification.ch-notification-visible {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        .ch-notification.ch-notification-exit {
+            transform: translateX(120%);
+            opacity: 0;
+        }
+        .ch-notification-on { color: #34d399; }
+        .ch-notification-off { color: #f87171; }
+
+        /* ArrayList: list of enabled features, top-right */
+        #ch-arraylist {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 1190;
+            min-width: 140px;
+            max-width: 220px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(3, 7, 18, 0.95));
+            border: 1px solid rgba(55, 65, 81, 0.8);
+            color: #e5e7eb;
+            font-size: 12px;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+        #ch-arraylist.ch-arraylist-hidden {
+            transform: translateX(120%);
+            opacity: 0;
+            pointer-events: none;
+        }
+        .ch-arraylist-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #9ca3af;
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid rgba(55, 65, 81, 0.6);
+        }
+        .ch-arraylist-list {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .ch-arraylist-item {
+            color: #a5b4fc;
+        }
+
+        @font-face {
+            font-family: 'Cold Night for Alligators';
+            src: url('assets/fonts/coldnightforalligators.eot?#iefix') format('embedded-opentype'),
+                url('assets/fonts/coldnightforalligators.woff') format('woff'),
+                url('assets/fonts/coldnightforalligators.ttf') format('truetype'),
+                url('assets/fonts/coldnightforalligators.svg#Cold%20Night%20for%20Alligators') format('svg');
+            font-weight: normal;
+            font-style: normal;
+        }
+    </style>
+	<!-- <script src="https://code.createjs.com/1.0.0/easeljs.min.js"></script> -->
+</head>
+<body>
+	
+    <noscript>This webpage makes extensive use of JavaScript. Please enable JavaScript in your web browser to view this
+        page.</noscript>
+
+    <div id="background-container"></div>
+    <div id="openfl-content"></div>
+
+    <!-- Zoom Controls -->
+    <div class="zoom-controls">
+        <button class="zoom-btn" onclick="zoomIn()" title="Zoom In">+</button>
+        <button class="zoom-btn" onclick="resetZoom()" title="Reset Zoom">⌂</button>
+        <button class="zoom-btn" onclick="zoomOut()" title="Zoom Out">−</button>
+    </div>
+
+    <!-- Notifications (bottom-right) -->
+    <div id="ch-notifications" aria-live="polite"></div>
+    <!-- ArrayList (top-right, list of enabled features) -->
+    <div id="ch-arraylist" class="ch-arraylist-hidden">
+        <div class="ch-arraylist-title">Enabled</div>
+        <div class="ch-arraylist-list" data-role="arraylist-items"></div>
+    </div>
+
+    <!-- Cheat client menu -->
+    <button id="cheat-menu-toggle" type="button">CHLENIX</button>
+    <div id="cheat-menu" class="hidden">
+        <div class="cheat-menu-panel">
+            <aside class="cheat-sidebar">
+                <div class="cheat-sidebar-logo">
+                    <img src="assets/ch/logo.png" alt="Logo">
+                </div>
+                <nav class="cheat-sidebar-nav">
+                    <button class="cheat-sidebar-btn active" type="button" title="Combat" data-type="Combat">
+                        <img src="assets/ch/Combat.svg" alt="Combat">
+                    </button>
+                    <button class="cheat-sidebar-btn" type="button" title="Movement" data-type="Movement">
+                        <img src="assets/ch/Movement.svg" alt="Movement">
+                    </button>
+                    <button class="cheat-sidebar-btn" type="button" title="World" data-type="World">
+                        <img src="assets/ch/World.svg" alt="World">
+                    </button>
+                    <button class="cheat-sidebar-btn" type="button" title="Player" data-type="Player">
+                        <img src="assets/ch/Player.svg" alt="Player">
+                    </button>
+                    <button class="cheat-sidebar-btn" type="button" title="Visual" data-type="Visual">
+                        <img src="assets/ch/Visual.svg" alt="Visual">
+                    </button>
+                    <button class="cheat-sidebar-btn" type="button" title="Other" data-type="Other">
+                        <img src="assets/ch/Other.svg" alt="Other">
+                    </button>
+                    <button class="cheat-sidebar-btn" type="button" title="Config" data-type="Config">
+                        <img src="assets/ch/Config.svg" alt="Config">
+                    </button>
+                </nav>
+                <div class="cheat-sidebar-spacer"></div>
+            </aside>
+
+            <main class="cheat-main">
+                <header class="cheat-main-header">
+                    <div class="cheat-breadcrumb">
+                        <span data-role="breadcrumb-type">Combat</span>
+                        <span>&gt;</span>
+                        <span class="cheat-breadcrumb-current" data-role="breadcrumb-feature">Functions</span>
+                    </div>
+                    <button class="cheat-icon-btn" type="button" data-role="close-cheat-menu" title="Close menu">✕</button>
+                </header>
+
+                <section class="cheat-main-body">
+                    <section class="cheat-panel">
+                        <div class="cheat-panel-title">Conditions</div>
+                        <div class="cheat-option-list" data-role="feature-list">
+                            <!-- заполняется динамически из cheat-config.js -->
+                        </div>
+                    </section>
+
+                    <section class="cheat-panel">
+                        <div class="cheat-panel-title">Settings</div>
+                        <div class="cheat-option-list" data-role="settings-body">
+                            <!-- правая панель с настройками выбранной функции -->
+                            <div class="cheat-slider-group">
+                                <div class="cheat-slider-label">
+                                    <span>Select a function</span>
+                                    <span class="cheat-slider-value">Right click on item</span>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        // Prevent default drag and drop behavior globally
+        document.addEventListener('dragenter', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }, false);
+
+        document.addEventListener('dragover', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }, false);
+
+        document.addEventListener('dragleave', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }, false);
+
+        document.addEventListener('drop', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            // Prevent browser from navigating to the dropped file
+            return false;
+        }, false);
+
+    </script>
+
+    <script type="text/javascript">
+        // Zoom control functions
+        function zoomIn() {
+            currentZoom = Math.min(3, currentZoom * 1.2);
+            applyZoom(currentZoom);
+        }
+
+        function zoomOut() {
+            currentZoom = Math.max(0.5, currentZoom * 0.8);
+            applyZoom(currentZoom);
+        }
+
+        function resetZoom() {
+            currentZoom = 1;
+            applyZoom(currentZoom);
+        }
+
+        // Override getContext to always set willReadFrequently to true
+        (function () {
+            var originalGetContext = HTMLCanvasElement.prototype.getContext;
+            HTMLCanvasElement.prototype.getContext = function (contextType, contextAttributes) {
+                contextAttributes = contextAttributes || {};
+                contextAttributes.willReadFrequently = true;
+                return originalGetContext.call(this, contextType, contextAttributes);
+            };
+        })();
+    </script>
+
+    <script src="./cheat-config.js"></script>
+    <script src="./cheat-runtime.js"></script>
+
+    <script>
+        // Cheat menu logic (отдельно от кода игры)
+        (function () {
+            var toggleBtn = document.getElementById('cheat-menu-toggle');
+            var menu = document.getElementById('cheat-menu');
+            if (!toggleBtn || !menu) return;
+
+            var config = window.CHLENIX_CONFIG || null;
+            if (!config) {
+                console.warn("CHLENIX_CONFIG not found");
+            }
+
+            var closeBtn = menu.querySelector('[data-role="close-cheat-menu"]');
+            var featureListEl = menu.querySelector('[data-role="feature-list"]');
+            var settingsBodyEl = menu.querySelector('[data-role="settings-body"]');
+            var breadcrumbTypeEl = menu.querySelector('[data-role="breadcrumb-type"]');
+            var breadcrumbFeatureEl = menu.querySelector('[data-role="breadcrumb-feature"]');
+            var sidebarButtons = menu.querySelectorAll('.cheat-sidebar-btn[data-type]');
+
+            var currentType = "Combat";
+            var currentSettingsFeatureId = null;
+
+            // Храним состояние (включено/выключено, настройки, хоткеи) в localStorage
+            var STORAGE_KEY = "tdp4-cheat-menu-state-v2";
+            var state = {
+                open: false,
+                features: {} // { [id]: { enabled: bool, options: { [optId]: any }, hotkey: string|null } }
+            };
+
+            function loadState() {
+                try {
+                    var raw = localStorage.getItem(STORAGE_KEY);
+                    if (!raw) return;
+                    var parsed = JSON.parse(raw);
+                    if (parsed && typeof parsed === "object") {
+                        state = parsed;
+                    }
+                } catch (e) {
+                    // ignore
+                }
+            }
+
+            function saveState() {
+                // актуализируем флаг открытости меню
+                state.open = !menu.classList.contains("hidden");
+                try {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+                } catch (e) {
+                    // ignore
+                }
+            }
+
+            function ensureFeatureState(id) {
+                if (!state.features[id]) {
+                    state.features[id] = {
+                        enabled: false,
+                        options: {},
+                        hotkey: null
+                    };
+                }
+                return state.features[id];
+            }
+
+            function getFriendsListState() {
+                var st = ensureFeatureState("Friends1337");
+                if (!Array.isArray(st.options.friends)) {
+                    st.options.friends = [];
+                }
+                return st.options.friends;
+            }
+
+            function syncFriendsToRuntime() {
+                var friends = getFriendsListState();
+                var ids = friends
+                    .map(function (f) { return f.id; })
+                    .filter(function (id) { return id !== null && id !== undefined && String(id).trim() !== ""; });
+                var raw = ids.join(" ");
+                if (window.myCheat && typeof window.myCheat.setOption === "function") {
+                    window.myCheat.setOption("Friends1337", "List", raw);
+                }
+            }
+
+            function getFeaturesForType(typeId) {
+                if (!config) return [];
+                return config.features.filter(function (f) { return f.type === typeId; });
+            }
+
+            function findFeatureById(id) {
+                if (!config) return null;
+                for (var i = 0; i < config.features.length; i++) {
+                    if (config.features[i].id === id) return config.features[i];
+                }
+                return null;
+            }
+
+            function getNotificationDuration() {
+                var st = ensureFeatureState("cheatNotifications1337");
+                var dur = st.options && st.options.Duration != null ? Number(st.options.Duration) : 1.5;
+                return Math.max(0.5, Math.min(5, dur)) * 1000;
+            }
+
+            function showNotification(displayName, enabled) {
+                var st = ensureFeatureState("cheatNotifications1337");
+                if (!st.enabled) return;
+                var container = document.getElementById("ch-notifications");
+                if (!container) return;
+                var el = document.createElement("div");
+                el.className = "ch-notification " + (enabled ? "ch-notification-on" : "ch-notification-off");
+                el.textContent = displayName + ": " + (enabled ? "ON" : "OFF");
+                container.appendChild(el);
+                requestAnimationFrame(function () {
+                    el.classList.add("ch-notification-visible");
+                });
+                var duration = getNotificationDuration();
+                setTimeout(function () {
+                    el.classList.add("ch-notification-exit");
+                    setTimeout(function () {
+                        if (el.parentNode) el.parentNode.removeChild(el);
+                    }, 350);
+                }, duration);
+            }
+
+            function updateArrayList() {
+                var st = ensureFeatureState("cheatArrayList1337");
+                var panel = document.getElementById("ch-arraylist");
+                var listEl = panel ? panel.querySelector('[data-role="arraylist-items"]') : null;
+                if (!panel || !listEl) return;
+                if (!st.enabled) {
+                    panel.classList.add("ch-arraylist-hidden");
+                    listEl.innerHTML = "";
+                    return;
+                }
+                panel.classList.remove("ch-arraylist-hidden");
+                var enabledNames = [];
+                if (config && config.features) {
+                    config.features.forEach(function (f) {
+                        if (f.toggle && ensureFeatureState(f.id).enabled) {
+                            enabledNames.push(f.displayName);
+                        }
+                    });
+                }
+                listEl.innerHTML = "";
+                enabledNames.forEach(function (name) {
+                    var item = document.createElement("div");
+                    item.className = "ch-arraylist-item";
+                    item.textContent = name;
+                    listEl.appendChild(item);
+                });
+            }
+
+            function renderFeatureList(typeId) {
+                if (!featureListEl || !config) return;
+                featureListEl.innerHTML = "";
+                var list = getFeaturesForType(typeId);
+
+                if (!list.length) {
+                    var emptyRow = document.createElement("div");
+                    emptyRow.className = "cheat-option-row";
+                    emptyRow.textContent = "No functions in this category yet";
+                    featureListEl.appendChild(emptyRow);
+                    return;
+                }
+
+                list.forEach(function (feat) {
+                    var fState = ensureFeatureState(feat.id);
+                    var row = document.createElement("div");
+                    row.className = "cheat-option-row";
+                    row.setAttribute("data-feature-id", feat.id);
+
+                    var label = document.createElement("label");
+                    label.className = "cheat-checkbox-label";
+
+                    if (feat.toggle) {
+                        var input = document.createElement("input");
+                        input.type = "checkbox";
+                        input.setAttribute("data-feature", feat.id);
+                        input.setAttribute("data-role", "feature-toggle");
+                        if (fState.enabled) {
+                            input.checked = true;
+                            row.classList.add("active");
+                        }
+                        label.appendChild(input);
+                    }
+
+                    var nameSpan = document.createElement("span");
+                    nameSpan.textContent = feat.displayName;
+                    label.appendChild(nameSpan);
+
+                    row.appendChild(label);
+
+                    var rightBox = document.createElement("div");
+                    rightBox.className = "cheat-row-right";
+
+                    var hotkeyLabel = fState.hotkey || feat.hotkey;
+                    if (hotkeyLabel) {
+                        var hotkeySpan = document.createElement("span");
+                        hotkeySpan.className = "cheat-hotkey-tag";
+                        hotkeySpan.textContent = hotkeyLabel;
+                        hotkeySpan.setAttribute("data-role", "rebind-hotkey");
+                        hotkeySpan.setAttribute("data-feature-id", feat.id);
+                        rightBox.appendChild(hotkeySpan);
+                    }
+
+                    var settingsBtn = document.createElement("button");
+                    settingsBtn.type = "button";
+                    settingsBtn.className = "cheat-settings-btn";
+                    settingsBtn.setAttribute("data-role", "open-settings");
+                    settingsBtn.setAttribute("data-feature-id", feat.id);
+
+                    var settingsImg = document.createElement("img");
+                    settingsImg.src = "assets/ch/Settings.svg";
+                    settingsImg.alt = "Settings";
+                    settingsBtn.appendChild(settingsImg);
+
+                    rightBox.appendChild(settingsBtn);
+
+                    row.appendChild(rightBox);
+
+                    featureListEl.appendChild(row);
+                });
+            }
+
+            function clearSettingsPanel(message) {
+                if (!settingsBodyEl) return;
+                settingsBodyEl.innerHTML = "";
+                var group = document.createElement("div");
+                group.className = "cheat-slider-group";
+                var label = document.createElement("div");
+                label.className = "cheat-slider-label";
+                var left = document.createElement("span");
+                left.textContent = message || "Select a function";
+                var right = document.createElement("span");
+                right.className = "cheat-slider-value";
+                right.textContent = "Right click on item";
+                label.appendChild(left);
+                label.appendChild(right);
+                group.appendChild(label);
+                settingsBodyEl.appendChild(group);
+            }
+
+            function renderSettingsForFeature(feature) {
+                if (!settingsBodyEl || !feature) return;
+                currentSettingsFeatureId = feature.id;
+
+                if (breadcrumbFeatureEl) {
+                    breadcrumbFeatureEl.textContent = feature.displayName;
+                }
+
+                settingsBodyEl.innerHTML = "";
+
+                var fState = ensureFeatureState(feature.id);
+
+                if (feature.id === "Friends1337") {
+                    renderFriendsSettings();
+                    return;
+                }
+
+                if (!feature.settings || !feature.settings.length) {
+                    clearSettingsPanel("No settings for this function");
+                    return;
+                }
+
+                feature.settings.forEach(function (s) {
+                    if (s.kind === "slider") {
+                        var group = document.createElement("div");
+                        group.className = "cheat-slider-group";
+
+                        var label = document.createElement("div");
+                        label.className = "cheat-slider-label";
+
+                        var left = document.createElement("span");
+                        left.textContent = s.label;
+                        var right = document.createElement("span");
+                        right.className = "cheat-slider-value";
+                        var sliderValue = (fState.options.hasOwnProperty(s.id) ? fState.options[s.id] : s["default"]);
+                        if (sliderValue != null && sliderValue.toFixed) {
+                            right.textContent = sliderValue.toFixed(2);
+                        } else {
+                            right.textContent = String(sliderValue);
+                        }
+
+                        label.appendChild(left);
+                        label.appendChild(right);
+                        group.appendChild(label);
+
+                        var input = document.createElement("input");
+                        input.type = "range";
+                        input.min = s.min;
+                        input.max = s.max;
+                        input.step = s.step;
+                        input.value = sliderValue;
+                        input.setAttribute("data-feature-id", feature.id);
+                        input.setAttribute("data-option-id", s.id);
+
+                        group.appendChild(input);
+                        settingsBodyEl.appendChild(group);
+                    } else if (s.kind === "bool") {
+                        var boolGroup = document.createElement("div");
+                        boolGroup.className = "cheat-slider-group";
+                        var boolLabel = document.createElement("div");
+                        boolLabel.className = "cheat-slider-label";
+
+                        var leftBool = document.createElement("span");
+                        leftBool.textContent = s.label;
+
+                        var rightBool = document.createElement("label");
+                        rightBool.className = "cheat-checkbox-label";
+                        var boolInput = document.createElement("input");
+                        boolInput.type = "checkbox";
+                        var boolValue = fState.options.hasOwnProperty(s.id) ? !!fState.options[s.id] : !!s["default"];
+                        boolInput.checked = boolValue;
+                        boolInput.setAttribute("data-feature-id", feature.id);
+                        boolInput.setAttribute("data-option-id", s.id);
+                        var boolText = document.createElement("span");
+                        boolText.textContent = "Enable";
+
+                        rightBool.appendChild(boolInput);
+                        rightBool.appendChild(boolText);
+
+                        boolLabel.appendChild(leftBool);
+                        boolLabel.appendChild(rightBool);
+                        boolGroup.appendChild(boolLabel);
+
+                        settingsBodyEl.appendChild(boolGroup);
+                    } else if (s.kind === "text") {
+                        var textGroup = document.createElement("div");
+                        textGroup.className = "cheat-slider-group";
+
+                        var textLabel = document.createElement("div");
+                        textLabel.className = "cheat-slider-label";
+
+                        var leftText = document.createElement("span");
+                        leftText.textContent = s.label;
+                        textLabel.appendChild(leftText);
+
+                        textGroup.appendChild(textLabel);
+
+                        var textarea = document.createElement("textarea");
+                        textarea.className = "cheat-textarea";
+                        var textValue = fState.options.hasOwnProperty(s.id) ? fState.options[s.id] : (s["default"] || "");
+                        textarea.value = textValue;
+                        textarea.setAttribute("data-feature-id", feature.id);
+                        textarea.setAttribute("data-option-id", s.id);
+
+                        textGroup.appendChild(textarea);
+                        settingsBodyEl.appendChild(textGroup);
+                    }
+                });
+            }
+
+            function renderFriendsSettings() {
+                var friends = getFriendsListState();
+                settingsBodyEl.innerHTML = "";
+
+                // Блок добавления друга
+                var addGroup = document.createElement("div");
+                addGroup.className = "cheat-slider-group";
+
+                var addLabel = document.createElement("div");
+                addLabel.className = "cheat-slider-label";
+
+                var left = document.createElement("span");
+                left.textContent = "Add friend by ID";
+                var right = document.createElement("span");
+                right.className = "cheat-slider-value";
+                right.textContent = "ID + nickname";
+
+                addLabel.appendChild(left);
+                addLabel.appendChild(right);
+                addGroup.appendChild(addLabel);
+
+                var addRow = document.createElement("div");
+                addRow.className = "friends-add-row";
+
+                var idInput = document.createElement("input");
+                idInput.type = "text";
+                idInput.placeholder = "ID";
+                idInput.setAttribute("data-role", "friend-add-id");
+
+                var nameInput = document.createElement("input");
+                nameInput.type = "text";
+                nameInput.placeholder = "Nickname";
+                nameInput.setAttribute("data-role", "friend-add-name");
+
+                var addBtn = document.createElement("button");
+                addBtn.type = "button";
+                addBtn.textContent = "+";
+                addBtn.setAttribute("data-role", "friend-add");
+
+                addRow.appendChild(idInput);
+                addRow.appendChild(nameInput);
+                addRow.appendChild(addBtn);
+                addGroup.appendChild(addRow);
+
+                settingsBodyEl.appendChild(addGroup);
+
+                // Список друзей
+                var listEl = document.createElement("div");
+                listEl.className = "cheat-option-list";
+                listEl.setAttribute("data-role", "friends-list");
+
+                if (!friends.length) {
+                    var empty = document.createElement("div");
+                    empty.className = "cheat-option-row";
+                    empty.textContent = "No friends yet";
+                    listEl.appendChild(empty);
+                } else {
+                    friends.forEach(function (fr, idx) {
+                        var row = document.createElement("div");
+                        row.className = "cheat-option-row";
+                        row.setAttribute("data-friend-index", String(idx));
+
+                        var label = document.createElement("div");
+                        label.className = "cheat-checkbox-label";
+
+                        var idSpan = document.createElement("span");
+                        idSpan.textContent = String(fr.id);
+
+                        var nameSpan = document.createElement("span");
+                        nameSpan.textContent = fr.nickname ? " — " + fr.nickname : "";
+
+                        label.appendChild(idSpan);
+                        label.appendChild(nameSpan);
+                        row.appendChild(label);
+
+                        var rightBox = document.createElement("div");
+                        rightBox.className = "cheat-row-right";
+
+                        var removeBtn = document.createElement("button");
+                        removeBtn.type = "button";
+                        removeBtn.className = "cheat-settings-btn";
+                        removeBtn.setAttribute("data-role", "friend-remove");
+                        removeBtn.setAttribute("data-friend-index", String(idx));
+                        removeBtn.textContent = "-";
+
+                        rightBox.appendChild(removeBtn);
+                        row.appendChild(rightBox);
+
+                        listEl.appendChild(row);
+                    });
+                }
+
+                settingsBodyEl.appendChild(listEl);
+            }
+
+            function setCurrentType(typeId) {
+                currentType = typeId;
+                if (breadcrumbTypeEl) {
+                    breadcrumbTypeEl.textContent = typeId;
+                }
+                renderFeatureList(typeId);
+                clearSettingsPanel("Select a function");
+            }
+
+            // Восстанавливаем состояние из localStorage (после описания функций помощников)
+            loadState();
+            updateArrayList();
+
+            function openMenu() {
+                // при открытии перерисовываем список из актуального state
+                if (config && featureListEl && settingsBodyEl) {
+                    setCurrentType(currentType);
+                }
+                menu.classList.remove('hidden');
+                saveState();
+            }
+
+            function closeMenu() {
+                menu.classList.add('hidden');
+                saveState();
+            }
+
+            // Инициализация списков при загрузке
+            if (config && featureListEl && settingsBodyEl) {
+                setCurrentType(currentType);
+            }
+
+            // Переключение вкладок (Combat, Movement, ...)
+            sidebarButtons.forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var type = btn.getAttribute('data-type');
+                    if (!type) return;
+                    sidebarButtons.forEach(function (b) { b.classList.remove('active'); });
+                    btn.classList.add('active');
+                    setCurrentType(type);
+                });
+            });
+
+            var rebindFeatureId = null;
+
+            // Кнопка с шестеренкой и изменение бинда
+            if (featureListEl) {
+                featureListEl.addEventListener('click', function (e) {
+                    var settingsBtn = e.target.closest('[data-role="open-settings"]');
+                    if (settingsBtn) {
+                        var featureId = settingsBtn.getAttribute('data-feature-id');
+                        var feat = findFeatureById(featureId);
+                        if (feat) {
+                            renderSettingsForFeature(feat);
+                        }
+                        return;
+                    }
+
+                    var hotkeySpan = e.target.closest('[data-role="rebind-hotkey"]');
+                    if (hotkeySpan) {
+                        rebindFeatureId = hotkeySpan.getAttribute('data-feature-id');
+                        // подсветим редактируемый хоткей
+                        var activeTags = featureListEl.querySelectorAll('.cheat-hotkey-tag--editing');
+                        for (var i = 0; i < activeTags.length; i++) {
+                            activeTags[i].classList.remove('cheat-hotkey-tag--editing');
+                        }
+                        hotkeySpan.classList.add('cheat-hotkey-tag--editing');
+                    }
+                });
+            }
+
+            // Добавление / удаление друзей в настройках Friends
+            if (settingsBodyEl) {
+                settingsBodyEl.addEventListener('click', function (e) {
+                    var addBtn = e.target.closest('[data-role="friend-add"]');
+                    if (addBtn) {
+                        var idInput = settingsBodyEl.querySelector('[data-role="friend-add-id"]');
+                        var nameInput = settingsBodyEl.querySelector('[data-role="friend-add-name"]');
+                        if (!idInput) return;
+
+                        var rawId = (idInput.value || "").trim();
+                        var rawName = (nameInput && nameInput.value || "").trim();
+                        if (!rawId) return;
+
+                        var idNum = Number(rawId);
+                        var idVal = isNaN(idNum) ? rawId : idNum;
+
+                        var friends = getFriendsListState();
+                        friends.push({ id: idVal, nickname: rawName });
+
+                        idInput.value = "";
+                        if (nameInput) nameInput.value = "";
+
+                        syncFriendsToRuntime();
+                        saveState();
+                        renderFriendsSettings();
+                        return;
+                    }
+
+                    var removeBtn = e.target.closest('[data-role="friend-remove"]');
+                    if (removeBtn) {
+                        var idxStr = removeBtn.getAttribute('data-friend-index');
+                        var idx = idxStr != null ? parseInt(idxStr, 10) : -1;
+                        var friends = getFriendsListState();
+                        if (idx >= 0 && idx < friends.length) {
+                            friends.splice(idx, 1);
+                            syncFriendsToRuntime();
+                            saveState();
+                            renderFriendsSettings();
+                        }
+                    }
+                });
+            }
+
+            toggleBtn.addEventListener('click', function () {
+                if (menu.classList.contains('hidden')) {
+                    openMenu();
+                } else {
+                    closeMenu();
+                }
+            });
+
+            if (closeBtn) {
+                closeBtn.addEventListener('click', closeMenu);
+            }
+
+            // Закрытие по Esc и привязка/обработка хоткеев
+            window.addEventListener('keydown', function (e) {
+                // если ожидаем клавишу для бинда
+                if (rebindFeatureId && !menu.classList.contains('hidden')) {
+                    // отмена бинда по Esc
+                    if (e.key === 'Escape') {
+                        e.preventDefault();
+                        var editingTagCancel = featureListEl.querySelector('.cheat-hotkey-tag--editing');
+                        if (editingTagCancel) editingTagCancel.classList.remove('cheat-hotkey-tag--editing');
+                        rebindFeatureId = null;
+                        return;
+                    }
+
+                    // игнорируем чистые модификаторы
+                    if (e.key === "Shift" || e.key === "Control" || e.key === "Alt" || e.key === "Meta") {
+                        return;
+                    }
+
+                    e.preventDefault();
+                    var newLabel = e.key.length === 1 ? e.key.toUpperCase() : e.key;
+
+                    var fStateRebind = ensureFeatureState(rebindFeatureId);
+                    fStateRebind.hotkey = newLabel;
+                    var featRebind = findFeatureById(rebindFeatureId);
+                    if (featRebind) {
+                        featRebind.hotkey = newLabel;
+                    }
+                    var tag = featureListEl.querySelector('[data-role="rebind-hotkey"][data-feature-id="' + rebindFeatureId + '"]');
+                    if (tag) {
+                        tag.textContent = newLabel;
+                        tag.classList.remove('cheat-hotkey-tag--editing');
+                    }
+                    rebindFeatureId = null;
+                    saveState();
+                    return;
+                }
+
+                // обычное закрытие по Esc
+                if (e.key === 'Escape' && !menu.classList.contains('hidden')) {
+                    closeMenu();
+                    return;
+                }
+
+                // если фокус в инпуте/тексте — не трогаем хоткеи
+                var tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : "";
+                if (tag === "input" || tag === "textarea") {
+                    return;
+                }
+
+                // обработчик хоткеев функций (работает и когда меню скрыто)
+                var pressed = e.key.length === 1 ? e.key.toUpperCase() : e.key;
+                var featureIdToToggle = null;
+
+                if (config) {
+                    for (var i = 0; i < config.features.length; i++) {
+                        var f = config.features[i];
+                        var st = ensureFeatureState(f.id);
+                        var hot = st.hotkey || f.hotkey;
+                        if (hot && hot === pressed) {
+                            featureIdToToggle = f.id;
+                            break;
+                        }
+                    }
+                }
+
+                if (featureIdToToggle) {
+                    e.preventDefault();
+                    var stToggle = ensureFeatureState(featureIdToToggle);
+                    var newEnabled = !stToggle.enabled;
+                    stToggle.enabled = newEnabled;
+
+                    // обновим чекбокс и подсветку, если меню открыто
+                    if (!menu.classList.contains('hidden') && featureListEl) {
+                        var row = featureListEl.querySelector('[data-feature-id="' + featureIdToToggle + '"]');
+                        if (row) {
+                            var cb = row.querySelector('input[type="checkbox"][data-role="feature-toggle"]');
+                            if (cb) cb.checked = newEnabled;
+                            row.classList.toggle('active', newEnabled);
+                        }
+                    }
+
+                    if (window.myCheat && typeof window.myCheat.setFeature === 'function') {
+                        window.myCheat.setFeature(featureIdToToggle, newEnabled);
+                    }
+                    var featToggle = findFeatureById(featureIdToToggle);
+                    if (featToggle) {
+                        showNotification(featToggle.displayName, newEnabled);
+                    }
+                    updateArrayList();
+                    console.log('Cheat hotkey toggle:', featureIdToToggle, '=>', newEnabled);
+                    saveState();
+                }
+            });
+
+            // Обработка чекбоксов и слайдеров (сюда можно подвязать реальный чит)
+            menu.addEventListener('change', function (e) {
+                var target = e.target;
+
+                // Основной чекбокс функции (слева)
+                if (target && target.matches('input[type="checkbox"][data-role="feature-toggle"][data-feature]')) {
+                    var featureId = target.getAttribute('data-feature');
+                    var enabled = target.checked;
+                    var fStateToggle = ensureFeatureState(featureId);
+                    fStateToggle.enabled = enabled;
+                    var row = target.closest('.cheat-option-row');
+                    if (row) {
+                        row.classList.toggle('active', enabled);
+                    }
+                    if (window.myCheat && typeof window.myCheat.setFeature === 'function') {
+                        window.myCheat.setFeature(featureId, enabled);
+                    }
+                    var feat = findFeatureById(featureId);
+                    if (feat) {
+                        showNotification(feat.displayName, enabled);
+                    }
+                    updateArrayList();
+                    console.log('Cheat feature:', featureId, '=>', enabled);
+                    saveState();
+                    return;
+                }
+
+                // Булевые настройки во вкладке Settings
+                if (target && target.matches('input[type="checkbox"][data-feature-id][data-option-id]')) {
+                    var featId = target.getAttribute('data-feature-id');
+                    var optionId = target.getAttribute('data-option-id');
+                    var valueBool = !!target.checked;
+                    var fStateBool = ensureFeatureState(featId);
+                    fStateBool.options[optionId] = valueBool;
+                    if (window.myCheat && typeof window.myCheat.setOption === 'function') {
+                        window.myCheat.setOption(featId, optionId, valueBool);
+                    }
+                    console.log('Cheat option (bool):', featId, optionId, '=>', valueBool);
+                    saveState();
+                }
+            });
+
+            menu.addEventListener('input', function (e) {
+                var target = e.target;
+
+                // Слайдеры в Settings
+                if (target && target.matches('input[type="range"][data-feature-id][data-option-id]')) {
+                    var featId = target.getAttribute('data-feature-id');
+                    var optionId = target.getAttribute('data-option-id');
+                    var value = parseFloat(target.value);
+                    var group = target.closest('.cheat-slider-group');
+                    var displayEl = group ? group.querySelector('.cheat-slider-value') : null;
+                    if (displayEl) {
+                        displayEl.textContent = value.toFixed(2);
+                    }
+                    var fStateSlider = ensureFeatureState(featId);
+                    fStateSlider.options[optionId] = value;
+                    if (window.myCheat && typeof window.myCheat.setOption === 'function') {
+                        window.myCheat.setOption(featId, optionId, value);
+                    }
+                    console.log('Cheat option (slider):', featId, optionId, '=>', value);
+                    saveState();
+                }
+
+                // Числовые инпуты (health / armor и т.п., если появятся)
+                if (target && target.matches('input[type="number"][data-feature-id][data-option-id]')) {
+                    var featIdNum = target.getAttribute('data-feature-id');
+                    var optionIdNum = target.getAttribute('data-option-id');
+                    var valueNum = parseFloat(target.value);
+                    var fStateNum = ensureFeatureState(featIdNum);
+                    fStateNum.options[optionIdNum] = valueNum;
+                    if (window.myCheat && typeof window.myCheat.setOption === 'function') {
+                        window.myCheat.setOption(featIdNum, optionIdNum, valueNum);
+                    }
+                    console.log('Cheat option (number):', featIdNum, optionIdNum, '=>', valueNum);
+                    saveState();
+                }
+
+                // Текстовые поля (например, список друзей)
+                if (target && target.matches('textarea[data-feature-id][data-option-id], input[type="text"][data-feature-id][data-option-id]')) {
+                    var featIdText = target.getAttribute('data-feature-id');
+                    var optionIdText = target.getAttribute('data-option-id');
+                    var valueText = String(target.value || "");
+                    var fStateText = ensureFeatureState(featIdText);
+                    fStateText.options[optionIdText] = valueText;
+                    if (window.myCheat && typeof window.myCheat.setOption === 'function') {
+                        window.myCheat.setOption(featIdText, optionIdText, valueText);
+                    }
+                    console.log('Cheat option (text):', featIdText, optionIdText, '=>', valueText);
+                    saveState();
+                }
+            });
+        })();
+    </script>
+
+</body>
+
+</html>
