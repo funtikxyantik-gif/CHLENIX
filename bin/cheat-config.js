@@ -17,6 +17,21 @@
         // Основные функции чита
         features: [
             {
+                id: "teleport1337",
+                displayName: "Teleport",
+                type: "World",
+                hotkey: "F4",
+                toggle: true,
+                settings: [
+                    {
+                        id: "Button",
+                        label: "Key",
+                        kind: "key",
+                        "default": 84
+                    }
+                ]
+            },
+            {
                 id: "noclip1337",
                 displayName: "NoClip",
                 type: "Movement",
