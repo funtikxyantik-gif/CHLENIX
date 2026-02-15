@@ -72,7 +72,6 @@
             case "Friends1337":
                 if (optionId === "List") {
                     var raw = String(value || "");
-                    // разделяем по запятым, точкам с запятой, пробелам и переводам строк
                     var items = raw.split(/[\s,;]+/);
                     var list = [];
                     for (var i = 0; i < items.length; i++) {
@@ -82,6 +81,34 @@
                         list.push(isNaN(n) ? token : n);
                     }
                     setWindowVar("Friends1337", list);
+                }
+                break;
+            case "Enemy1337":
+                if (optionId === "EnemyList") {
+                    var raw = String(value || "");
+                    var items = raw.split(/[\s,;]+/);
+                    var list = [];
+                    for (var i = 0; i < items.length; i++) {
+                        var token = items[i].trim();
+                        if (!token) continue;
+                        var n = Number(token);
+                        list.push(isNaN(n) ? token : n);
+                    }
+                    setWindowVar("Enemy1337", list);
+                }
+                break;
+            case "Staff1337":
+                if (optionId === "StaffList") {
+                    var raw = String(value || "");
+                    var items = raw.split(/[\s,;]+/);
+                    var list = [];
+                    for (var i = 0; i < items.length; i++) {
+                        var token = items[i].trim();
+                        if (!token) continue;
+                        var n = Number(token);
+                        list.push(isNaN(n) ? token : n);
+                    }
+                    setWindowVar("Staff1337", list);
                 }
                 break;
 

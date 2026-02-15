@@ -139,7 +139,6 @@
                 settings: []
             },
             {
-                // Переменная-друг для будущих фич, без переключателя
                 id: "Friends1337",
                 displayName: "Friends",
                 type: "Other",
@@ -149,6 +148,36 @@
                     {
                         id: "List",
                         label: "Friend IDs (comma / space separated)",
+                        kind: "text",
+                        "default": ""
+                    }
+                ]
+            },
+            {
+                id: "Enemy1337",
+                displayName: "Friends",
+                type: "Other",
+                hotkey: "",
+                toggle: false,
+                settings: [
+                    {
+                        id: "EnemyList",
+                        label: "Enemy IDs (comma / space separated)",
+                        kind: "text",
+                        "default": ""
+                    }
+                ]
+            },
+            {
+                id: "Staff1337",
+                displayName: "Friends",
+                type: "Other",
+                hotkey: "",
+                toggle: false,
+                settings: [
+                    {
+                        id: "StaffList",
+                        label: "Enemy IDs (comma / space separated)",
                         kind: "text",
                         "default": ""
                     }
