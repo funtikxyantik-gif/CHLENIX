@@ -139,6 +139,14 @@
                 settings: []
             },
             {
+                id: "NoFriendsDamage1337",
+                displayName: "NoFriendsDamage",
+                type: "Other",
+                hotkey: "",
+                toggle: true,
+                settings: []
+            },
+            {
                 id: "Friends1337",
                 displayName: "Friends",
                 type: "Other",
