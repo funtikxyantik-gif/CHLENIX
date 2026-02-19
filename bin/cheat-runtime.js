@@ -15,9 +15,6 @@
     // Включение / выключение основных функций
     window.myCheat.setFeature = function (featureId, enabled) {
         switch (featureId) {
-            case "teleport1337":
-                setWindowVar("teleport1337", !!enabled);
-                break;
             case "noclip1337":
                 setWindowVar("noclip1337", !!enabled);
                 break;
@@ -25,8 +22,10 @@
                 setWindowVar("grenadehack1337", !!enabled);
                 break;
             case "AimHack1337":
-                // Заметь: в tdpa4.js переменная называется Aimhack1337 (с заглавной A)
                 setWindowVar("Aimhack1337", !!enabled);
+                break;
+			case "AntiAfk1337":
+                setWindowVar("AntiAfk1337", !!enabled);
                 break;
             default:
                 break;
@@ -59,13 +58,6 @@
                     setWindowVar("aimFriends1337", !!value);
                 } if (optionId === "All") {
                     setWindowVar("aimAll1337", !!value);
-                }
-                break;
-
-            case "teleport1337":
-                if (optionId === "Button") {
-                    var v = value === "" || value == null ? 0 : Number(value);
-                    setWindowVar("teleportKey1337", isNaN(v) ? 0 : v);
                 }
                 break;
 

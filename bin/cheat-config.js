@@ -16,20 +16,13 @@
 
         // Основные функции чита
         features: [
-            {
-                id: "teleport1337",
-                displayName: "Teleport",
+			{
+                id: "AntiAfk1337",
+                displayName: "AntiAfk",
                 type: "World",
-                hotkey: "F4",
+                hotkey: "",
                 toggle: true,
-                settings: [
-                    {
-                        id: "Button",
-                        label: "Key",
-                        kind: "key",
-                        "default": 84
-                    }
-                ]
+                settings: []
             },
             {
                 id: "noclip1337",
