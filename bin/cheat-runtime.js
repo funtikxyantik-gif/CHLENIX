@@ -15,6 +15,9 @@
     // Включение / выключение основных функций
     window.myCheat.setFeature = function (featureId, enabled) {
         switch (featureId) {
+			case "speedhack1337":
+                setWindowVar("speedhack1337", !!enabled);
+                break;
             case "noclip1337":
                 setWindowVar("noclip1337", !!enabled);
                 break;
@@ -35,6 +38,11 @@
     // Передача числовых/булевых настроек в глобальные переменные tdpa4.js
     window.myCheat.setOption = function (featureId, optionId, value) {
         switch (featureId) {
+			case "speedhack1337":
+                if (optionId === "Speed") {
+                    setWindowVar("Speed1337", Number(value) || 0);
+                }
+                break;
             case "noclip1337":
                 if (optionId === "Speed") {
                     setWindowVar("noclipSpeed1337", Number(value) || 0);

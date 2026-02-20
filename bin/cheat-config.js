@@ -32,31 +32,40 @@
                 toggle: true,
                 settings: [
                     {
-                        id: "Speed",
-                        label: "Speed",
-                        kind: "slider",
-                        min: 0.5,
-                        max: 10,
-                        step: 0.1,
-                        "default": 1.0
-                    },
-                    {
                         id: "SpeedUp",
                         label: "Speed Up",
                         kind: "slider",
-                        min: 0.5,
+                        min: 0.1,
                         max: 10,
                         step: 0.1,
-                        "default": 2.0
+                        "default": 3.0
                     },
                     {
                         id: "SpeedDown",
                         label: "Speed Down",
                         kind: "slider",
-                        min: 0.5,
+                        min: 0.1,
                         max: 10,
                         step: 0.1,
-                        "default": 0.5
+                        "default": 3.0
+                    }
+                ]
+            },
+			{
+                id: "speedhack1337",
+                displayName: "SpeedHack",
+                type: "Movement",
+                hotkey: "F9",
+                toggle: true,
+                settings: [
+                    {
+                        id: "Speed",
+                        label: "Speed",
+                        kind: "slider",
+                        min: 0.1,
+                        max: 10,
+                        step: 0.1,
+                        "default": 1.0
                     }
                 ]
             },
@@ -64,7 +73,7 @@
                 id: "grenadehack1337",
                 displayName: "GrenadeHack",
                 type: "Combat",
-                hotkey: "F2",
+                hotkey: "G",
                 toggle: true,
                 settings: [
                     {
@@ -88,7 +97,7 @@
                 id: "AimHack1337",
                 displayName: "Aim",
                 type: "Combat",
-                hotkey: "F3",
+                hotkey: "V",
                 toggle: true,
                 settings: [
                     {
@@ -135,7 +144,7 @@
                 id: "NoFriendsDamage1337",
                 displayName: "NoFriendsDamage",
                 type: "Other",
-                hotkey: "",
+                hotkey: "F8",
                 toggle: true,
                 settings: []
             },
@@ -156,7 +165,7 @@
             },
             {
                 id: "Enemy1337",
-                displayName: "Friends",
+                displayName: "Enemies",
                 type: "Other",
                 hotkey: "",
                 toggle: false,
@@ -171,7 +180,7 @@
             },
             {
                 id: "Staff1337",
-                displayName: "Friends",
+                displayName: "Staffs",
                 type: "Other",
                 hotkey: "",
                 toggle: false,
